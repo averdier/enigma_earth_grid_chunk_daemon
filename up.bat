@@ -1,0 +1,1 @@
+docker-compose -p earth_grid_chunk -f ./docker/docker-compose.yml up -d 
