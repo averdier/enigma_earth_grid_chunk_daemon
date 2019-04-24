@@ -61,6 +61,8 @@ class ChunkDaemon(BaseApp):
             self.logger.info('connected')
             self.client.subscribe(self.config.DEVICES_WILDCARD)
             self.logger.info('subscribed to {0}'.format(self.config.DEVICES_WILDCARD))
+            self.client.subscribe(self.config.CHUNKS_WILDCARD)
+            self.logger.info('subscribed to {0}'.format(self.config.CHUNKS_WILDCARD))
 
     def on_message(self, payload, msg):
         parts = msg.topic.split('/')
@@ -68,6 +70,13 @@ class ChunkDaemon(BaseApp):
 
         if 'sensors' in parts:
             self.on_device_data(parts[1], data)
+        
+        if 'chunks' in parts and 'from_clients' in parts:
+            self.on_command(parts[1], data['kind'])
+        
+    def on_command(self, chunk, command):
+        if command == 'ping:devices':
+            self.update_chunk_device_list(chunk)
         
     
     def on_device_data(self, deviceId, data):
@@ -84,7 +93,7 @@ class ChunkDaemon(BaseApp):
             }
             del data['pos']
 
-            chunk_hash = hash(chunk)
+            chunk_hash = str(hash(chunk))
 
             push_payload['data'] = data
             self.client.publish(
