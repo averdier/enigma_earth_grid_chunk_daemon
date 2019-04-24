@@ -1,6 +1,7 @@
 # coding: utf-8
 
 import logging
+import time
 import paho.mqtt.client as paho
 import requests
 import numpy
@@ -89,7 +90,8 @@ class ChunkDaemon(BaseApp):
         if chunk:
             push_payload = {
                 'from': deviceId,
-                'pos': data['pos']
+                'pos': data['pos'],
+                'ts': time.time()
             }
             del data['pos']
 
