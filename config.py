@@ -15,7 +15,7 @@ class Config:
     BROKER_USERNAME = os.environ.get('BROKER_USERNAME', 'chunk_daemon')
     BROKER_PASSWORD = os.environ.get('BROKER_PASSWORD', 'chunk_daemon')
 
-    DEVICES_WILDCARD = os.environ.get('DEVICES_WILDCARD', 'sensors/+/from_device')
+    DEVICES_WILDCARD = os.environ.get('DEVICES_WILDCARD', "sensors/+/from_device")
     CHUNK_DIVISOR = int(os.environ.get('CHUNK_DIVISOR', '4'))
 
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME', '')

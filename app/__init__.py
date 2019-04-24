@@ -57,7 +57,7 @@ class ChunkDaemon(BaseApp):
         if rc == 0:
             self.connected = True
             self.logger.info('connected')
-            client.subscribe(self.config.DEVICES_WILDCARD)
+            self.client.subscribe(self.config.DEVICES_WILDCARD)
             self.logger.info('subscribed to {0}'.format(self.config.DEVICES_WILDCARD))
 
     def on_message(self, payload, msg):
