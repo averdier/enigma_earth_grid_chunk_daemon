@@ -37,6 +37,8 @@ class ChunkDaemon(BaseApp):
     def __init__(self, config_name):
         super().__init__(config_name)
         self.client = paho.Client()
+        self.devices_chunk = {}
+        self.chunks_devices = {}
 
         def on_mqtt_connect(client, userdata, flags, rc):
             nonlocal self
@@ -64,6 +66,11 @@ class ChunkDaemon(BaseApp):
         parts = msg.topic.split('/')
         data = json.loads(msg.payload.decode('utf-8'))
 
+        if 'sensors' in parts:
+            self.on_device_data(parts[1], data)
+        
+    
+    def on_device_data(self, deviceId, data):
         chunk = find_chunk(
             data['pos']['lat'],
             data['pos']['lon'],
@@ -72,16 +79,62 @@ class ChunkDaemon(BaseApp):
 
         if chunk:
             push_payload = {
-                'from': parts[1],
+                'from': deviceId,
                 'pos': data['pos']
             }
             del data['pos']
 
+            chunk_hash = hash(chunk)
+
             push_payload['data'] = data
             self.client.publish(
-                'chunks/{0}/data'.format(hash(chunk)), 
+                'chunks/{0}/data'.format(chunk_hash), 
                 json.dumps(push_payload)
             )
+            self.logger.debug('data send')
+
+            self.update_chunk_device_event(deviceId, chunk_hash)
+
+    def update_chunk_device_event(self, deviceId, currentChunk):
+        old_device_chunk = self.devices_chunk.get(deviceId, '')
+        if old_device_chunk != currentChunk:
+            if old_device_chunk != '':
+                self.chunks_devices[old_device_chunk].remove(deviceId)
+                self.client.publish(
+                'chunks/{0}/events'.format(old_device_chunk),
+                    json.dumps({
+                        'kind': 'device:exited',
+                        'args': {
+                            'deviceId': deviceId
+                        }
+                    })
+                )
+                self.logger.debug('exit event send')
+                self.update_chunk_device_list(old_device_chunk)
+
+            if self.chunks_devices.get(currentChunk):
+                self.chunks_devices[currentChunk].append(deviceId)
+            else:
+                self.chunks_devices[currentChunk] = [deviceId]
+
+            self.client.publish(
+                'chunks/{0}/events'.format(currentChunk),
+                json.dumps({
+                    'kind': 'device:entered',
+                    'args': {
+                        'deviceId': deviceId
+                    }
+                })
+            )
+            self.devices_chunk[deviceId] = currentChunk
+            self.logger.debug('enter event send')
+            self.update_chunk_device_list(currentChunk)
+        
+    def update_chunk_device_list(self, chunk):
+        self.client.publish(
+            'chunks/{0}/devices'.format(chunk),
+            json.dumps(self.chunks_devices.get(chunk, []))
+        )
 
     def loop(self):
         self.client.loop()
